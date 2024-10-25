@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.475">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>SIR model with ABM</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="abm_files/libs/clipboard/clipboard.min.js"></script>
+<script src="abm_files/libs/quarto-html/quarto.js"></script>
+<script src="abm_files/libs/quarto-html/popper.min.js"></script>
+<script src="abm_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="abm_files/libs/quarto-html/anchor.min.js"></script>
+<link href="abm_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="abm_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="abm_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="abm_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="abm_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#initial-states" id="toc-initial-states" class="nav-link active" data-scroll-target="#initial-states">Initial states</a></li>
+  <li><a href="#simulate-using-gillespie-algorithm-stochastic" id="toc-simulate-using-gillespie-algorithm-stochastic" class="nav-link" data-scroll-target="#simulate-using-gillespie-algorithm-stochastic">Simulate using Gillespie algorithm (stochastic)</a>
+  <ul class="collapse">
+  <li><a href="#event-handlers" id="toc-event-handlers" class="nav-link" data-scroll-target="#event-handlers">Event handlers</a></li>
+  <li><a href="#run-simulation" id="toc-run-simulation" class="nav-link" data-scroll-target="#run-simulation">Run simulation</a></li>
+  </ul></li>
+  <li><a href="#simulate-odes-deterministic" id="toc-simulate-odes-deterministic" class="nav-link" data-scroll-target="#simulate-odes-deterministic">Simulate ODEs (deterministic)</a></li>
+  <li><a href="#estimate-parameters" id="toc-estimate-parameters" class="nav-link" data-scroll-target="#estimate-parameters">Estimate parameters</a>
+  <ul class="collapse">
+  <li><a href="#estimate-beta-and-gamma-from-gillespie-algorithm" id="toc-estimate-beta-and-gamma-from-gillespie-algorithm" class="nav-link" data-scroll-target="#estimate-beta-and-gamma-from-gillespie-algorithm">Estimate beta and gamma from Gillespie algorithm</a></li>
+  <li><a href="#estimate-beta-and-gamma-from-ode-simulation" id="toc-estimate-beta-and-gamma-from-ode-simulation" class="nav-link" data-scroll-target="#estimate-beta-and-gamma-from-ode-simulation">Estimate beta and gamma from ODE simulation</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">SIR model with ABM</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<div class="callout-note callout callout-style-default callout-captioned">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-caption-container flex-fill">
+ABM package related link
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><a href="https://cran.r-project.org/web/packages/ABM/index.html">CRAN link</a></p>
+<p><a href="https://github.com/junlingm/ABM/wiki">Documentation on Github with examples</a></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ABM)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'ABM' was built under R version 4.3.1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(deSolve)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'deSolve' was built under R version 4.3.1</code></pre>
+</div>
+</div>
+<section id="initial-states" class="level3">
+<h3 class="anchored" data-anchor-id="initial-states">Initial states</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># the population size</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>N <span class="ot">&lt;-</span>  <span class="dv">10000</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># the initial number of infectious agents</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>I0 <span class="ot">&lt;-</span>  <span class="dv">10</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># the transmission rate</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>beta <span class="ot">&lt;-</span>  <span class="fl">0.4</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># the recovery rate</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">&lt;-</span>  <span class="fl">0.2</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># custom function to handle cases where rate == 0, which should return Inf </span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>wait.exp <span class="ot">&lt;-</span>  <span class="cf">function</span>(rate) <span class="cf">if</span> (rate <span class="sc">==</span> <span class="dv">0</span>) <span class="cn">Inf</span> <span class="cf">else</span> <span class="fu">rexp</span>(<span class="dv">1</span>, rate)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># simulation duration</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>sim_dur <span class="ot">&lt;-</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="simulate-using-gillespie-algorithm-stochastic" class="level2">
+<h2 class="anchored" data-anchor-id="simulate-using-gillespie-algorithm-stochastic">Simulate using Gillespie algorithm (stochastic)</h2>
+<p>Mostly follow the <a href="https://github.com/junlingm/ABM/wiki/Gillespie-SIR">example</a>, with slight modification to simulate multiple chains concurrently</p>
+<section id="event-handlers" class="level3">
+<h3 class="anchored" data-anchor-id="event-handlers">Event handlers</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Event for S-&gt;I transition</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>handler.infect <span class="ot">&lt;-</span>  <span class="cf">function</span>(time, sim, agent) {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">getState</span>(agent)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  x<span class="sc">$</span>S <span class="ot">&lt;-</span> x<span class="sc">$</span>S <span class="sc">-</span> <span class="dv">1</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  x<span class="sc">$</span>I <span class="ot">&lt;-</span>  x<span class="sc">$</span>I <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setState</span>(agent, x)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reschedule</span>(time, agent)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Event for I-&gt;R transition</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>handler.recover <span class="ot">&lt;-</span>  <span class="cf">function</span>(time, sim, agent) {</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">getState</span>(agent)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  x<span class="sc">$</span>R <span class="ot">&lt;-</span> x<span class="sc">$</span>R <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>  x<span class="sc">$</span>I <span class="ot">&lt;-</span> x<span class="sc">$</span>I <span class="sc">-</span> <span class="dv">1</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setState</span>(agent, x)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reschedule</span>(time, agent)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="co"># set up function for reschedule time for the next event (i.e S-&gt; I, I-&gt;R transition)</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>reschedule <span class="ot">&lt;-</span>  <span class="cf">function</span>(time, agent) {</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>  <span class="co"># clear old event (i.e. old wait time)</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">clearEvents</span>(agent)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>  state <span class="ot">=</span> <span class="fu">getState</span>(agent)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute time point for S -&gt; I transition</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># S -&gt; I transition time is sampled from exponentional distribution with rate = beta*I*S/N</span></span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>  t.inf <span class="ot">=</span> time <span class="sc">+</span> <span class="fu">wait.exp</span>(beta<span class="sc">*</span>state<span class="sc">$</span>I<span class="sc">*</span>state<span class="sc">$</span>S<span class="sc">/</span>N)</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>  <span class="co"># schedule event at computed time</span></span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">schedule</span>(agent, <span class="fu">newEvent</span>(t.inf, handler.infect))</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute time point I -&gt; R transition</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># I -&gt; R transition time is sampled from exponentional distribution with rate = gamma*I</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>  t.rec <span class="ot">=</span> time <span class="sc">+</span> <span class="fu">wait.exp</span>(gamma<span class="sc">*</span>state<span class="sc">$</span>I)</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>  <span class="co"># schedule event at computed time</span></span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">schedule</span>(agent, <span class="fu">newEvent</span>(t.rec, handler.recover))</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="run-simulation" class="level3">
+<h3 class="anchored" data-anchor-id="run-simulation">Run simulation</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(parallel)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># ----- Define number of chains for simulation -----</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>no_chain <span class="ot">&lt;-</span> <span class="dv">20</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>run_simulation <span class="ot">&lt;-</span> <span class="cf">function</span>(i){</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  sim <span class="ot">&lt;-</span>  Simulation<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># the initial state</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  sim<span class="sc">$</span>state <span class="ot">&lt;-</span>  <span class="fu">list</span>(<span class="at">S=</span>N<span class="sc">-</span>I0, <span class="at">I=</span>I0, <span class="at">R=</span><span class="dv">0</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># schedule an infection event and a recovery event</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">reschedule</span>(<span class="dv">0</span>, sim<span class="sc">$</span>get)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># agent = NULL means use Simulation obj as agent (which is confusing)</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># logger is required to record each state of </span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  sim<span class="sc">$</span><span class="fu">addLogger</span>(<span class="fu">newStateLogger</span>(<span class="at">name=</span><span class="st">"S"</span>, <span class="at">agent=</span><span class="cn">NULL</span>, <span class="at">state=</span><span class="st">"S"</span>))</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  sim<span class="sc">$</span><span class="fu">addLogger</span>(<span class="fu">newStateLogger</span>(<span class="st">"I"</span>, <span class="cn">NULL</span>, <span class="st">"I"</span>))</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  sim<span class="sc">$</span><span class="fu">addLogger</span>(<span class="fu">newStateLogger</span>(<span class="st">"R"</span>, <span class="cn">NULL</span>, <span class="st">"R"</span>))</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  sim_out <span class="ot">&lt;-</span> sim<span class="sc">$</span><span class="fu">run</span>(<span class="dv">0</span><span class="sc">:</span>sim_dur)</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  sim_out <span class="ot">&lt;-</span> sim_out[, <span class="fu">c</span>(<span class="st">"S"</span>, <span class="st">"I"</span>, <span class="st">"R"</span>)]</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">colnames</span>(sim_out) <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="fu">colnames</span>(sim_out), <span class="st">"_"</span>, i)</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>  sim_out</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a><span class="co"># parallelize simulation process</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>out <span class="ot">&lt;-</span> parallel<span class="sc">::</span><span class="fu">mclapply</span>(<span class="dv">1</span><span class="sc">:</span>no_chain, run_simulation, <span class="at">mc.cores =</span> parallel<span class="sc">::</span><span class="fu">detectCores</span>() <span class="sc">-</span> <span class="dv">2</span>)</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a><span class="co"># compute mean of all the chain</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>result <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  <span class="at">times =</span> <span class="dv">0</span><span class="sc">:</span>sim_dur,</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>  <span class="at">S =</span> <span class="fu">rowMeans</span>(<span class="fu">sapply</span>(out, <span class="cf">function</span>(df){df<span class="sc">$</span>S} )),</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>  <span class="at">I =</span> <span class="fu">rowMeans</span>(<span class="fu">sapply</span>(out, <span class="cf">function</span>(df){df<span class="sc">$</span>I} )),</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>  <span class="at">R =</span> <span class="fu">rowMeans</span>(<span class="fu">sapply</span>(out, <span class="cf">function</span>(df){df<span class="sc">$</span>R} ))</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>result </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>    times       S       I       R
+1       0 9990.00   10.00    0.00
+2       1 9985.00   11.75    3.25
+3       2 9978.75   15.40    5.85
+4       3 9971.20   19.85    8.95
+5       4 9961.50   25.75   12.75
+6       5 9950.00   32.00   18.00
+7       6 9938.10   37.75   24.15
+8       7 9920.90   46.10   33.00
+9       8 9901.30   55.95   42.75
+10      9 9878.15   67.90   53.95
+11     10 9846.85   83.85   69.30
+12     11 9811.15  101.05   87.80
+13     12 9769.00  121.20  109.80
+14     13 9717.20  144.75  138.05
+15     14 9655.45  173.65  170.90
+16     15 9584.75  206.30  208.95
+17     16 9499.95  246.40  253.65
+18     17 9397.35  294.75  307.90
+19     18 9281.65  345.50  372.85
+20     19 9140.00  412.25  447.75
+21     20 8976.35  487.95  535.70
+22     21 8795.80  563.40  640.80
+23     22 8589.80  653.70  756.50
+24     23 8359.65  744.35  896.00
+25     24 8107.20  838.10 1054.70
+26     25 7837.15  934.45 1228.40
+27     26 7546.60 1029.45 1423.95
+28     27 7242.80 1114.65 1642.55
+29     28 6932.15 1195.70 1872.15
+30     29 6614.40 1267.95 2117.65
+31     30 6287.75 1332.70 2379.55
+32     31 5967.50 1379.20 2653.30
+33     32 5652.30 1418.25 2929.45
+34     33 5350.80 1427.85 3221.35
+35     34 5064.25 1426.70 3509.05
+36     35 4792.85 1413.05 3794.10
+37     36 4538.45 1390.95 4070.60
+38     37 4299.25 1355.80 4344.95
+39     38 4077.10 1310.85 4612.05
+40     39 3875.75 1256.25 4868.00
+41     40 3687.60 1199.55 5112.85
+42     41 3517.65 1133.45 5348.90
+43     42 3368.00 1066.50 5565.50
+44     43 3226.05 1000.45 5773.50
+45     44 3103.25  929.10 5967.65
+46     45 2986.40  861.65 6151.95
+47     46 2885.25  799.70 6315.05
+48     47 2790.30  741.55 6468.15
+49     48 2707.75  682.40 6609.85
+50     49 2638.60  619.45 6741.95
+51     50 2570.10  569.40 6860.50
+52     51 2512.20  520.75 6967.05
+53     52 2461.45  471.70 7066.85
+54     53 2416.00  425.20 7158.80
+55     54 2374.05  383.95 7242.00
+56     55 2335.95  349.35 7314.70
+57     56 2305.15  312.05 7382.80
+58     57 2275.90  281.40 7442.70
+59     58 2249.85  253.75 7496.40
+60     59 2226.00  230.70 7543.30
+61     60 2203.80  210.35 7585.85
+62     61 2185.75  189.10 7625.15
+63     62 2168.70  170.40 7660.90
+64     63 2156.65  151.10 7692.25
+65     64 2144.10  136.05 7719.85
+66     65 2133.05  120.25 7746.70
+67     66 2122.90  108.15 7768.95
+68     67 2114.65   96.75 7788.60
+69     68 2107.35   86.05 7806.60
+70     69 2100.85   76.60 7822.55
+71     70 2095.45   67.65 7836.90
+72     71 2090.50   60.35 7849.15
+73     72 2086.20   52.45 7861.35
+74     73 2082.60   45.40 7872.00
+75     74 2079.65   40.10 7880.25
+76     75 2075.90   37.10 7887.00
+77     76 2073.30   33.40 7893.30
+78     77 2070.45   29.55 7900.00
+79     78 2067.85   26.60 7905.55
+80     79 2065.50   24.15 7910.35
+81     80 2063.75   21.95 7914.30
+82     81 2062.25   18.95 7918.80
+83     82 2060.95   15.70 7923.35
+84     83 2059.70   13.65 7926.65
+85     84 2058.75   11.35 7929.90
+86     85 2057.60    9.85 7932.55
+87     86 2057.10    8.60 7934.30
+88     87 2056.25    7.75 7936.00
+89     88 2055.70    7.15 7937.15
+90     89 2055.15    6.25 7938.60
+91     90 2054.85    5.45 7939.70
+92     91 2054.45    4.65 7940.90
+93     92 2053.90    4.40 7941.70
+94     93 2053.75    3.75 7942.50
+95     94 2053.45    3.35 7943.20
+96     95 2053.20    3.25 7943.55
+97     96 2053.05    3.05 7943.90
+98     97 2052.65    2.95 7944.40
+99     98 2052.45    2.75 7944.80
+100    99 2052.25    2.50 7945.25
+101   100 2052.15    2.00 7945.85</code></pre>
+</div>
+</div>
+<p>Plot result</p>
+<div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'ggplot2' was built under R version 4.3.1</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="abm_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+</section>
+<section id="simulate-odes-deterministic" class="level2">
+<h2 class="anchored" data-anchor-id="simulate-odes-deterministic">Simulate ODEs (deterministic)</h2>
+<p>Estimate solution of ODE using Euler’s method</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define event handler </span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>handler <span class="ot">&lt;-</span> <span class="cf">function</span>(time, sim, agent){</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute delta_t</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># the smaller the time step is, the more accurate the estimation</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  timestep <span class="ot">&lt;-</span> <span class="fl">0.1</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># clearEvents(agent)</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">=</span> <span class="fu">getState</span>(sim)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute dS/dt, dI/dt, dR/dt according to the formulae</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  dS <span class="ot">=</span> <span class="sc">-</span> x<span class="sc">$</span>I<span class="sc">*</span>beta<span class="sc">*</span>x<span class="sc">$</span>S<span class="sc">/</span>N</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  dI <span class="ot">=</span> x<span class="sc">$</span>I<span class="sc">*</span>beta<span class="sc">*</span>x<span class="sc">$</span>S<span class="sc">/</span>N <span class="sc">-</span> x<span class="sc">$</span>I<span class="sc">*</span>gamma</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  dR <span class="ot">=</span> x<span class="sc">$</span>I<span class="sc">*</span>gamma</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  x<span class="sc">$</span>S <span class="ot">=</span> x<span class="sc">$</span>S <span class="sc">+</span> dS<span class="sc">*</span>timestep</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  x<span class="sc">$</span>I <span class="ot">=</span> x<span class="sc">$</span>I <span class="sc">+</span> dI<span class="sc">*</span>timestep</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>  x<span class="sc">$</span>R <span class="ot">=</span> x<span class="sc">$</span>R <span class="sc">+</span> dR<span class="sc">*</span>timestep</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setState</span>(sim, x)</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">schedule</span>(agent, <span class="fu">newEvent</span>(time <span class="sc">+</span> timestep, handler))</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>ode_sim <span class="ot">&lt;-</span> Simulation<span class="sc">$</span><span class="fu">new</span>()</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># add loggers</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>ode_sim<span class="sc">$</span><span class="fu">addLogger</span>(<span class="fu">newStateLogger</span>(<span class="st">"S"</span>, <span class="cn">NULL</span>, <span class="st">"S"</span>))</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>ode_sim<span class="sc">$</span><span class="fu">addLogger</span>(<span class="fu">newStateLogger</span>(<span class="st">"I"</span>, <span class="cn">NULL</span>, <span class="st">"I"</span>))</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>ode_sim<span class="sc">$</span><span class="fu">addLogger</span>(<span class="fu">newStateLogger</span>(<span class="st">"R"</span>, <span class="cn">NULL</span>, <span class="st">"R"</span>))</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>ode_sim<span class="sc">$</span>state <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">S =</span> N <span class="sc">-</span> I0, <span class="at">I =</span> I0, <span class="at">R =</span> <span class="dv">0</span>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="co"># schedule event at time 0</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>ode_sim<span class="sc">$</span><span class="fu">schedule</span>(<span class="fu">newEvent</span>(<span class="dv">0</span>, handler))</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>ode_result <span class="ot">&lt;-</span> ode_sim<span class="sc">$</span><span class="fu">run</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">100</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Plot result</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="abm_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="estimate-parameters" class="level2">
+<h2 class="anchored" data-anchor-id="estimate-parameters">Estimate parameters</h2>
+<p>Check if estimated parameter returns expected gamma and beta</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the SIR model for deSolve</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>sir_model <span class="ot">&lt;-</span> <span class="cf">function</span>(time, state, parameters) {</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  par <span class="ot">&lt;-</span> <span class="fu">as.list</span>(<span class="fu">c</span>(state, parameters))</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">with</span>(par, {</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    dS <span class="ot">&lt;-</span> <span class="sc">-</span>beta<span class="sc">/</span>N <span class="sc">*</span> I <span class="sc">*</span> S</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    dI <span class="ot">&lt;-</span> beta<span class="sc">/</span>N <span class="sc">*</span> I <span class="sc">*</span> S <span class="sc">-</span> gamma <span class="sc">*</span> I</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    dR <span class="ot">&lt;-</span> gamma <span class="sc">*</span> I</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="fu">c</span>(dS, dI, dR))</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="estimate-beta-and-gamma-from-gillespie-algorithm" class="level3">
+<h3 class="anchored" data-anchor-id="estimate-beta-and-gamma-from-gillespie-algorithm">Estimate beta and gamma from Gillespie algorithm</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define initial_state using values defined above</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>initial_state <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">S =</span> N <span class="sc">-</span> I0, <span class="at">I =</span> I0, <span class="at">R =</span> <span class="dv">0</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="co"># define loss function</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>mse <span class="ot">&lt;-</span> <span class="cf">function</span>(parameters) {</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  pred <span class="ot">&lt;-</span> <span class="fu">ode</span>(initial_state, <span class="at">times =</span> <span class="dv">0</span><span class="sc">:</span>sim_dur, <span class="at">func =</span> sir_model, <span class="at">parms =</span> parameters)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  pred <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(pred)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  sim <span class="ot">&lt;-</span> result</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute residual</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>  res <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">S =</span> pred[<span class="st">"S"</span>] <span class="sc">-</span> sim[<span class="st">"S"</span>],</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">I =</span> pred[<span class="st">"I"</span>] <span class="sc">-</span> sim[<span class="st">"I"</span>],</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">R =</span> pred[<span class="st">"R"</span>] <span class="sc">-</span> sim[<span class="st">"R"</span>]</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mean</span>(<span class="fu">sum</span>((res)<span class="sc">**</span><span class="dv">2</span>))</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="fu">optim</span>(<span class="fu">c</span>(<span class="at">beta =</span> <span class="fl">0.4</span>, <span class="at">gamma=</span><span class="fl">0.5</span>), <span class="at">fn =</span> mse, <span class="at">gr=</span><span class="st">"BFGS"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$par
+     beta     gamma 
+0.4005236 0.2022009 
+
+$value
+[1] 651810.4
+
+$counts
+function gradient 
+      69       NA 
+
+$convergence
+[1] 0
+
+$message
+NULL</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">"beta for simulation "</span>, beta))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "beta for simulation 0.4"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">"gamma for simulation "</span>, gamma))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "gamma for simulation 0.2"</code></pre>
+</div>
+</div>
+</section>
+<section id="estimate-beta-and-gamma-from-ode-simulation" class="level3">
+<h3 class="anchored" data-anchor-id="estimate-beta-and-gamma-from-ode-simulation">Estimate beta and gamma from ODE simulation</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define initial_state using values defined above</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>initial_state <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">S =</span> N <span class="sc">-</span> I0, <span class="at">I =</span> I0, <span class="at">R =</span> <span class="dv">0</span>)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="co"># define loss function</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>ode_mse <span class="ot">&lt;-</span> <span class="cf">function</span>(parameters) {</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  pred <span class="ot">&lt;-</span> <span class="fu">ode</span>(initial_state, <span class="at">times =</span> <span class="dv">0</span><span class="sc">:</span>sim_dur, <span class="at">func =</span> sir_model, <span class="at">parms =</span> parameters)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  pred <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(pred)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  sim <span class="ot">&lt;-</span> ode_result</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute residual</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  res <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">S =</span> pred[<span class="st">"S"</span>] <span class="sc">-</span> sim[<span class="st">"S"</span>],</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">I =</span> pred[<span class="st">"I"</span>] <span class="sc">-</span> sim[<span class="st">"I"</span>],</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">R =</span> pred[<span class="st">"R"</span>] <span class="sc">-</span> sim[<span class="st">"R"</span>]</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mean</span>(<span class="fu">sum</span>((res)<span class="sc">**</span><span class="dv">2</span>))</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a><span class="fu">optim</span>(<span class="fu">c</span>(<span class="at">beta =</span> <span class="fl">0.4</span>, <span class="at">gamma=</span><span class="fl">0.5</span>), <span class="at">fn =</span> ode_mse, <span class="at">gr=</span><span class="st">"BFGS"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>$par
+     beta     gamma 
+0.3970002 0.1979581 
+
+$value
+[1] 18069.39
+
+$counts
+function gradient 
+      69       NA 
+
+$convergence
+[1] 0
+
+$message
+NULL</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">"beta for simulation "</span>, beta))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "beta for simulation 0.4"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">paste0</span>(<span class="st">"gamma for simulation "</span>, gamma))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "gamma for simulation 0.2"</code></pre>
+</div>
+</div>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

@@ -1,0 +1,259 @@
+---
+title: "SIR model with ABM"
+format: 
+  html: 
+    toc: true
+---
+
+::: callout-note
+## ABM package related link
+
+[CRAN link](https://cran.r-project.org/web/packages/ABM/index.html)
+
+[Documentation on Github with examples](https://github.com/junlingm/ABM/wiki)
+:::
+
+```{r}
+library(ABM)
+library(deSolve)
+```
+
+### Initial states
+
+```{r}
+# the population size
+N <-  10000
+# the initial number of infectious agents
+I0 <-  10
+# the transmission rate
+beta <-  0.4
+# the recovery rate
+gamma <-  0.2
+
+# custom function to handle cases where rate == 0, which should return Inf 
+wait.exp <-  function(rate) if (rate == 0) Inf else rexp(1, rate)
+# simulation duration
+sim_dur <- 100
+```
+
+## Simulate using Gillespie algorithm (stochastic)
+
+Mostly follow this [example](https://github.com/junlingm/ABM/wiki/Gillespie-SIR), with slight modification to simulate multiple chains concurrently
+
+### Event handlers
+
+```{r}
+# Event for S->I transition
+handler.infect <-  function(time, sim, agent) {
+  x <- getState(agent)
+  x$S <- x$S - 1
+  x$I <-  x$I + 1
+  setState(agent, x)
+  reschedule(time, agent)
+}
+# Event for I->R transition
+handler.recover <-  function(time, sim, agent) {
+  x <- getState(agent)
+  x$R <- x$R + 1
+  x$I <- x$I - 1
+  setState(agent, x)
+  reschedule(time, agent)
+}
+
+# set up function for reschedule time for the next event (i.e S-> I, I->R transition)
+reschedule <-  function(time, agent) {
+  # clear old event (i.e. old wait time)
+  clearEvents(agent)
+  state = getState(agent)
+  
+  # compute time point for S -> I transition
+  # S -> I transition time is sampled from exponentional distribution with rate = beta*I*S/N
+  t.inf = time + wait.exp(beta*state$I*state$S/N)
+  # schedule event at computed time
+  schedule(agent, newEvent(t.inf, handler.infect))
+  
+  # compute time point I -> R transition
+  # I -> R transition time is sampled from exponentional distribution with rate = gamma*I
+  t.rec = time + wait.exp(gamma*state$I)
+  # schedule event at computed time
+  schedule(agent, newEvent(t.rec, handler.recover))
+}
+```
+
+### Run simulation
+
+```{r}
+library(parallel)
+# ----- Define number of chains for simulation -----
+no_chain <- 20
+
+run_simulation <- function(i){
+  sim <-  Simulation$new()
+  # the initial state
+  sim$state <-  list(S=N-I0, I=I0, R=0)
+  # re-schedule an infection event and a recovery event
+  reschedule(0, sim$get)
+  
+  # agent = NULL means use Simulation obj as agent (which is confusing)
+  # logger is required to record each state of 
+  sim$addLogger(newStateLogger(name="S", agent=NULL, state="S"))
+  sim$addLogger(newStateLogger("I", NULL, "I"))
+  sim$addLogger(newStateLogger("R", NULL, "R"))
+  
+  sim_out <- sim$run(0:sim_dur)
+  sim_out <- sim_out[, c("S", "I", "R")]
+  sim_out
+}
+
+# parallelize simulation process
+out <- parallel::mclapply(1:no_chain, run_simulation, mc.cores = parallel::detectCores() - 2)
+
+# compute mean of all the chain
+result <- data.frame(
+  times = 0:sim_dur,
+  S = rowMeans(sapply(out, function(df){df$S} )),
+  I = rowMeans(sapply(out, function(df){df$I} )),
+  R = rowMeans(sapply(out, function(df){df$R} ))
+)
+```
+
+```{r}
+result 
+```
+
+Plot result
+
+```{r, echo=FALSE}
+library(ggplot2)
+ggplot(data=result)+
+  geom_line(aes(x = times, y = S, color = "S")) +
+  geom_line(aes(x = times, y = I, color = "I")) +
+  geom_line(aes(x = times, y = R, color = "R")) +
+  scale_colour_manual(
+    values = c("S" = "blueviolet", "I" = "red", "R" = "royalblue1")
+  ) + 
+  labs(x="Time", y = "Count", colour = "Compartment")
+```
+
+## Simulate ODEs (deterministic)
+
+Estimate solution of ODE using Euler's method
+
+```{r}
+# define event handler 
+handler <- function(time, sim, agent){
+  # compute delta_t
+  # the smaller the time step is, the more accurate the estimation
+  timestep <- 0.1
+  
+  # clearEvents(agent)
+  x = getState(sim)
+  
+  # compute dS/dt, dI/dt, dR/dt according to the formulae
+  dS = - x$I*beta*x$S/N
+  dI = x$I*beta*x$S/N - x$I*gamma
+  dR = x$I*gamma
+  
+  x$S = x$S + dS*timestep
+  x$I = x$I + dI*timestep
+  x$R = x$R + dR*timestep
+  
+  setState(sim, x)
+  schedule(agent, newEvent(time + timestep, handler))
+}
+```
+
+```{r}
+ode_sim <- Simulation$new()
+# add loggers
+ode_sim$addLogger(newStateLogger("S", NULL, "S"))
+ode_sim$addLogger(newStateLogger("I", NULL, "I"))
+ode_sim$addLogger(newStateLogger("R", NULL, "R"))
+
+ode_sim$state <- list(S = N - I0, I = I0, R = 0)
+
+# schedule event at time 0
+ode_sim$schedule(newEvent(0, handler))
+ode_result <- ode_sim$run(0:100)
+```
+
+Plot result
+
+```{r, echo=FALSE}
+library(ggplot2)
+ggplot(data=ode_result)+
+  geom_line(aes(x = times, y = S, color = "S")) +
+  geom_line(aes(x = times, y = I, color = "I")) +
+  geom_line(aes(x = times, y = R, color = "R")) +
+  scale_colour_manual(
+    values = c("S" = "blueviolet", "I" = "red", "R" = "royalblue1")
+  ) + 
+  labs(x="Time", y = "Count", colour = "Compartment")
+```
+
+## Estimate parameters
+
+Check if estimated parameter returns expected gamma and beta
+
+```{r}
+# define the SIR model for deSolve
+sir_model <- function(time, state, parameters) {
+  par <- as.list(c(state, parameters))
+  with(par, {
+    dS <- -beta/N * I * S
+    dI <- beta/N * I * S - gamma * I
+    dR <- gamma * I
+    list(c(dS, dI, dR))
+  })
+}
+```
+
+### Estimate beta and gamma from Gillespie algorithm
+
+```{r}
+# define initial_state using values defined above
+initial_state <- c(S = N - I0, I = I0, R = 0)
+# define loss function
+mse <- function(parameters) {
+  pred <- ode(initial_state, times = 0:sim_dur, func = sir_model, parms = parameters)
+  pred <- data.frame(pred)
+  sim <- result
+  
+  # compute residual
+  res <- data.frame(
+    S = pred["S"] - sim["S"],
+    I = pred["I"] - sim["I"],
+    R = pred["R"] - sim["R"]
+  )
+  mean(sum((res)**2))
+}
+
+optim(c(beta = 0.4, gamma=0.5), fn = mse, gr="BFGS")
+print(paste0("beta for simulation ", beta))
+print(paste0("gamma for simulation ", gamma))
+```
+
+### Estimate beta and gamma from ODE simulation
+
+```{r}
+# define initial_state using values defined above
+initial_state <- c(S = N - I0, I = I0, R = 0)
+# define loss function
+ode_mse <- function(parameters) {
+  pred <- ode(initial_state, times = 0:sim_dur, func = sir_model, parms = parameters)
+  pred <- data.frame(pred)
+  sim <- ode_result
+  
+  # compute residual
+  res <- data.frame(
+    S = pred["S"] - sim["S"],
+    I = pred["I"] - sim["I"],
+    R = pred["R"] - sim["R"]
+  )
+  mean(sum((res)**2))
+}
+
+optim(c(beta = 0.4, gamma=0.5), fn = ode_mse, gr="BFGS")
+print(paste0("beta for simulation ", beta))
+print(paste0("gamma for simulation ", gamma))
+```
